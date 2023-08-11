@@ -11,34 +11,6 @@ const mysql = require('mysql2/promise');
 
 const client = mysql.createPool(process.env.CONNECTION_STRING);
 
-const { createBullBoard } = require('@bull-board/api');
-const { BullAdapter } = require('@bull-board/api/bullAdapter');
-const { ExpressAdapter } = require('@bull-board/express');
-const Queue = require('bull');
-
-const queueNames = ['verifyPendingEventsCron', 'retryFailureEvents'];
-
-// Initialize Bull Queues instances
-// eslint-disable-next-line arrow-body-style
-const queues = queueNames.map((queueName) => {
-  return new Queue(queueName, {
-    redis: {
-      host: process.env.REDIS_HOST,
-      port: process.env.REDIS_PORT,
-    },
-    prefix: 'bull',
-  });
-});
-
-// set up BullBoard to use Bull Queues
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath('/bull-board');
-
-createBullBoard({
-  queues: queues.map((queue) => new BullAdapter(queue)),
-  serverAdapter,
-});
-
 async function insertWebhook(object) {
   const sql = 'INSERT INTO WEBHOOKS(id_origin, id_company, origin_date, fk_id, description, body) VALUES (?,?,?,?,?,?);';
   const values = [
@@ -53,8 +25,6 @@ async function insertWebhook(object) {
 }
 
 app.use(express.json());
-
-app.use('/bull-board', serverAdapter.getRouter());
 
 app.get('/', (req, res) => res.json({ message: 'Online!' }));
 
